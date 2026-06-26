@@ -20,17 +20,14 @@ This dashboard monitors global market momentum to determine risk aversion.
 # ---------------------------------------------------------
 @st.cache_data(ttl=3600) 
 def load_and_process_data(ticker="VT"):
-    # Download data up to today
-    today = datetime.date.today().strftime("%Y-%m-%d")
-    data = yf.download(ticker, start="2010-01-01", end=today, interval="1mo")
+    # Use Ticker.history() instead of download() to avoid yfinance formatting bugs
+    stock = yf.Ticker(ticker)
     
-    # Safely extract 'Adj Close' regardless of yfinance version
-    df = data['Adj Close'].copy()
+    # Fetch monthly data
+    data = stock.history(start="2010-01-01", interval="1mo")
     
-    # If it extracts as a Series, convert it back to a DataFrame
-    if isinstance(df, pd.Series):
-        df = pd.DataFrame(df)
-        
+    # history() automatically adjusts prices, so 'Close' is the adjusted close
+    df = data[['Close']].copy()
     df.columns = ['Global_Market']
     
     # Calculate the 12-month rolling return
@@ -54,11 +51,6 @@ def load_and_process_data(ticker="VT"):
     df['Favored_Style'] = df.apply(determine_style, axis=1)
     
     return df
-
-# Fetch the data (THIS IS THE LINE THAT WAS MISSING!)
-with st.spinner("Pulling real-time market data..."):
-    df = load_and_process_data("VT")
-
 # ---------------------------------------------------------
 # 3. DASHBOARD METRICS (CURRENT STATUS)
 # ---------------------------------------------------------
